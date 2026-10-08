@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Unimate Mobile",
+    "slug": "Unimate Mobile",
+    "scheme": "unimate",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/unimate_app_icon.jpg",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/unimate_app_icon.jpg",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF6B00"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FF6B00",
+        "foregroundImage": "./assets/unimate_app_icon.jpg"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/unimate_app_icon.jpg"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-router"
+    ]
+  }
+}
