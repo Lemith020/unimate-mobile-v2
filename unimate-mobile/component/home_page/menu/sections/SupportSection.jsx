@@ -25,6 +25,7 @@ export default function SupportSection() {
         {
             icon: 'flag-outline',
             label: 'Report a problem',
+            route: '/support/report-problem',
         },
         {
             icon: 'call-outline',
