@@ -15,7 +15,7 @@ const ORANGE = '#EA580C';
 const APP_ICON = require('../../assets/unimate_app_icon.jpg');
 // Put your photo here as lemith.jpg, or change this exact filename.
 // Keep the real image extension: use lemith.png here if your photo is PNG.
-const DEVELOPER_PHOTO = require('../../assets/about_us_page_developers_photos/lemith.jpg');
+const DEVELOPER_PHOTO = require('../../assets/about_us_page_developers_photos/lemith.png');
 
 type Feature = {
   label: string;
