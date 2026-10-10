@@ -20,6 +20,7 @@ export default function SupportSection() {
         {
             icon: 'chatbubble-ellipses-outline',
             label: 'Send feedback',
+            route: '/support/feedback',
         },
         {
             icon: 'flag-outline',
@@ -33,10 +34,9 @@ export default function SupportSection() {
             icon: 'information-circle-outline',
             label: 'About',
         },
-        {
-            icon: 'document-lock-outline',
-            label: 'Terms & Privacy',
-        },
+
+        //remove terms and privacy
+
     ];
 
     return (
