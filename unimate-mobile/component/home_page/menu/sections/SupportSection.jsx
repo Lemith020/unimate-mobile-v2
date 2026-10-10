@@ -34,7 +34,8 @@ export default function SupportSection() {
         },
         {
             icon: 'information-circle-outline',
-            label: 'About',
+            label: 'About Us',
+             route: '/support/about',
         },
 
         //remove terms and privacy
