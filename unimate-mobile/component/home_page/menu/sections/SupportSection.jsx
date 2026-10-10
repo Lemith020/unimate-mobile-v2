@@ -30,6 +30,7 @@ export default function SupportSection() {
         {
             icon: 'call-outline',
             label: 'Contact us',
+            route: '/support/contact-us',
         },
         {
             icon: 'information-circle-outline',
