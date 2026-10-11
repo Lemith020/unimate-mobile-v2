@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const { checkout } = require('../routes/foodRoutes');
 
 const pool = new Pool({
   user: process.env.DB_USER,
@@ -17,3 +18,5 @@ pool.on('error', (err) => {
 });
 
 module.exports = pool;
+
+checkout
