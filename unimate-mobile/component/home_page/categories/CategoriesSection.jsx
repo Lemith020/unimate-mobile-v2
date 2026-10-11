@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-
 import { useRouter } from 'expo-router';
 
 import BoardingCard from './BoardingCard';
@@ -11,114 +10,60 @@ import TransportCard from './TransportCard';
 import ServiceCard from './ServiceCard';
 import MarketplaceCard from './MarketplaceCard';
 
-
 export default function CategoriesSection() {
-
     const router = useRouter();
 
-
     return (
-
         <View style={styles.container}>
-
-            <Text style={styles.heading}>
-                Categories
-            </Text>
-
+            <Text style={styles.heading}>Categories</Text>
 
             <View style={styles.gridContainer}>
-
-
                 <BoardingCard
-
-                    onPress={() =>
-                        router.push('/boardings')
-                    }
-
+                    onPress={() => router.push('/boardings')}
                 />
-
 
                 <FoodCard
-
-                    onPress={() =>
-                        alert('Food clicked')
-                    }
-
+                    onPress={() => router.push('/food')}
                 />
-
 
                 <PharmacyCard
-
-                    onPress={() =>
-                        alert('Pharmacy clicked')
-                    }
-
+                    onPress={() => alert('Pharmacy clicked')}
                 />
-
 
                 <HealthCard
-
-                    onPress={() =>
-                        alert('Health clicked')
-                    }
-
+                    onPress={() => alert('Health clicked')}
                 />
-
 
                 <TransportCard
-
-                    onPress={() =>
-                        alert('Transport clicked')
-                    }
-
+                    onPress={() => alert('Transport clicked')}
                 />
-
 
                 <ServiceCard
-
-                    onPress={() =>
-                        alert('Service clicked')
-                    }
-
+                    onPress={() => alert('Service clicked')}
                 />
-
 
                 <MarketplaceCard
-
-                    onPress={() =>
-                        alert('Marketplace clicked')
-                    }
-
+                    onPress={() => alert('Marketplace clicked')}
                 />
-
-
             </View>
-
         </View>
-
     );
-
 }
 
-
 const styles = StyleSheet.create({
-
     container: {
         paddingHorizontal: 20,
         marginVertical: 10,
     },
-
     heading: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#332211',
         marginBottom: 15,
     },
-
     gridContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
     },
-
 });
