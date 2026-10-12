@@ -1,12 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     Stack,
     useLocalSearchParams,
@@ -24,7 +30,6 @@ type Shop = {
     name: string;
     address?: string | null;
     pickup_available?: boolean;
-    delivery_available?: boolean;
 };
 
 type Food = {
@@ -41,17 +46,29 @@ type MenuResponse = {
     error?: string;
 };
 
+type Order = {
+    id: string;
+    status: string;
+    total_amount: number;
+};
+
+type OrderResponse = {
+    message?: string;
+    error?: string;
+    order?: Order;
+};
+
 function firstParam(value?: string | string[]) {
     return Array.isArray(value) ? value[0] : value;
 }
 
 function parseQuantity(value?: string) {
-    const parsed = Number(value);
+    const number = Number(value);
 
-    return Number.isInteger(parsed) &&
-        parsed >= 1 &&
-        parsed <= 20
-        ? parsed
+    return Number.isInteger(number) &&
+        number >= 1 &&
+        number <= 20
+        ? number
         : 1;
 }
 
@@ -77,13 +94,52 @@ export default function FoodCheckoutPage() {
     const [quantity, setQuantity] = useState(
         parseQuantity(initialQuantity)
     );
+    const [phone, setPhone] = useState('');
+    const [note, setNote] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [placedOrder, setPlacedOrder] =
+        useState<Order | null>(null);
     const [retryCount, setRetryCount] = useState(0);
+
+    const submitLock = useRef(false);
 
     useEffect(() => {
         setQuantity(parseQuantity(initialQuantity));
     }, [shopId, foodId, initialQuantity]);
+
+    useEffect(() => {
+        let active = true;
+
+        async function loadPhone() {
+            try {
+                const stored =
+                    await AsyncStorage.getItem('userData');
+
+                if (!stored || !active) return;
+
+                const user = JSON.parse(stored);
+
+                if (
+                    active &&
+                    typeof user?.profile?.phone === 'string'
+                ) {
+                    setPhone((current) =>
+                        current || user.profile.phone
+                    );
+                }
+            } catch {
+                // The user can enter their phone manually.
+            }
+        }
+
+        void loadPhone();
+
+        return () => {
+            active = false;
+        };
+    }, []);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -98,7 +154,7 @@ export default function FoodCheckoutPage() {
             try {
                 if (!shopId || !foodId) {
                     throw new Error(
-                        'Please select a food from the shop menu.'
+                        'Please select a food from a shop menu.'
                     );
                 }
 
@@ -114,8 +170,7 @@ export default function FoodCheckoutPage() {
 
                 if (!response.ok) {
                     throw new Error(
-                        data.error ||
-                        'Unable to check this food.'
+                        data.error || 'Unable to load checkout.'
                     );
                 }
 
@@ -124,7 +179,7 @@ export default function FoodCheckoutPage() {
                     !Array.isArray(data.foods)
                 ) {
                     throw new Error(
-                        'The server returned invalid food details.'
+                        'Invalid food details received.'
                     );
                 }
 
@@ -137,17 +192,16 @@ export default function FoodCheckoutPage() {
                     selectedFood.is_available === false
                 ) {
                     throw new Error(
-                        'This food is no longer available. Please choose another item.'
+                        'This food is no longer available.'
                     );
                 }
 
-                const rawPrice = selectedFood.price;
-                const price = Number(rawPrice);
+                const price = Number(selectedFood.price);
 
                 if (
-                    rawPrice === null ||
-                    rawPrice === undefined ||
-                    String(rawPrice).trim() === '' ||
+                    selectedFood.price === null ||
+                    selectedFood.price === undefined ||
+                    String(selectedFood.price).trim() === '' ||
                     !Number.isFinite(price) ||
                     price < 0
                 ) {
@@ -157,22 +211,17 @@ export default function FoodCheckoutPage() {
                 }
 
                 setShop(data.shop);
-                setFood({
-                    ...selectedFood,
-                    price,
-                });
+                setFood({ ...selectedFood, price });
             } catch (caughtError) {
                 if (!active) return;
 
                 setError(
                     caughtError instanceof Error
                         ? caughtError.message
-                        : 'Unable to load checkout. Please try again.'
+                        : 'Unable to load checkout.'
                 );
             } finally {
-                if (active) {
-                    setLoading(false);
-                }
+                if (active) setLoading(false);
             }
         }
 
@@ -189,6 +238,8 @@ export default function FoodCheckoutPage() {
         shop?.pickup_available === true;
 
     const goBack = () => {
+        if (submitting) return;
+
         if (router.canGoBack()) {
             router.back();
         } else {
@@ -196,28 +247,170 @@ export default function FoodCheckoutPage() {
         }
     };
 
-    const openMenu = () => {
-        if (shopId) {
-            router.push({
-                pathname: '/food/[id]',
-                params: { id: shopId },
+    const finishOrder = () => {
+        setPlacedOrder(null);
+        setNote('');
+        setQuantity(1);
+        router.replace('/food');
+    };
+
+    const placeOrder = async () => {
+        if (
+            submitLock.current ||
+            placedOrder ||
+            !food ||
+            !shop
+        ) {
+            return;
+        }
+
+        if (!pickupAvailable) {
+            Alert.alert(
+                'Pickup unavailable',
+                'This shop does not accept pickup orders.'
+            );
+            return;
+        }
+
+        const cleanPhone = phone
+            .trim()
+            .replace(/[\s()-]/g, '');
+
+        if (!/^\+?\d{9,15}$/.test(cleanPhone)) {
+            Alert.alert(
+                'Contact number',
+                'Please enter a valid phone number.'
+            );
+            return;
+        }
+
+        submitLock.current = true;
+        setSubmitting(true);
+
+        try {
+            const stored =
+                await AsyncStorage.getItem('userData');
+
+            const user = stored ? JSON.parse(stored) : null;
+
+            if (
+                !user ||
+                typeof user.id !== 'string' ||
+                !user.id
+            ) {
+                Alert.alert(
+                    'Login required',
+                    'Please log in before placing an order.',
+                    [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                            text: 'Log in',
+                            onPress: () =>
+                                router.push('/login'),
+                        },
+                    ]
+                );
+                return;
+            }
+
+            let response: Response;
+
+            try {
+                response = await fetch(`${API_URL}/orders`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        student_id: user.id,
+                        place_id: shop.id,
+                        menu_item_id: food.id,
+                        quantity,
+                        contact_phone: cleanPhone,
+                        note: note.trim(),
+                        expected_unit_price: food.price,
+                    }),
+                });
+            } catch {
+                Alert.alert(
+                    'Connection interrupted',
+                    'We could not confirm whether your order was saved. Check with the shop before trying again.'
+                );
+                return;
+            }
+
+            let data: OrderResponse;
+
+            try {
+                data =
+                    (await response.json()) as OrderResponse;
+            } catch {
+                Alert.alert(
+                    'Unable to confirm order',
+                    'The server response could not be read. Check with the shop before trying again.'
+                );
+                return;
+            }
+
+            if (!response.ok) {
+                Alert.alert(
+                    'Unable to place order',
+                    data.error || 'Please try again.',
+                    response.status === 409
+                        ? [
+                              {
+                                  text: 'Reload checkout',
+                                  onPress: () =>
+                                      setRetryCount(
+                                          (current) => current + 1
+                                      ),
+                              },
+                          ]
+                        : [{ text: 'OK' }]
+                );
+                return;
+            }
+
+            if (
+                !data.order ||
+                typeof data.order.id !== 'string' ||
+                !Number.isFinite(
+                    Number(data.order.total_amount)
+                )
+            ) {
+                Alert.alert(
+                    'Unable to confirm order',
+                    'Check with the shop before trying again.'
+                );
+                return;
+            }
+
+            setPlacedOrder({
+                ...data.order,
+                total_amount: Number(
+                    data.order.total_amount
+                ),
             });
-        } else {
-            router.replace('/food');
+        } catch {
+            Alert.alert(
+                'Unable to place order',
+                'Please log in again and check your details.'
+            );
+        } finally {
+            submitLock.current = false;
+            setSubmitting(false);
         }
     };
 
     return (
-        <SafeAreaView
-            style={styles.screen}
-            edges={['top', 'bottom', 'left', 'right']}
-        >
+        <SafeAreaView style={styles.screen}>
             <Stack.Screen options={{ headerShown: false }} />
 
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.backButton}
                     onPress={goBack}
+                    disabled={submitting}
                     accessibilityRole="button"
                     accessibilityLabel="Go back"
                 >
@@ -232,312 +425,322 @@ export default function FoodCheckoutPage() {
                     <Text style={styles.headerTitle}>
                         Checkout
                     </Text>
-                    <Text style={styles.headerSubtitle}>
-                        Review your food selection
+                    <Text style={styles.subtitle}>
+                        Your next delicious break
                     </Text>
                 </View>
             </View>
 
-            {loading ? (
+            {loading || error ? (
                 <View style={styles.center}>
-                    <ActivityIndicator
-                        size="large"
-                        color="#EA580C"
-                    />
-                    <Text style={styles.stateTitle}>
-                        Checking your selection…
-                    </Text>
-                    <Text style={styles.stateText}>
-                        Getting the latest price and availability.
-                    </Text>
-                </View>
-            ) : error ? (
-                <View style={styles.center}>
-                    <Ionicons
-                        name="alert-circle-outline"
-                        size={48}
-                        color="#EA580C"
-                    />
+                    {loading ? (
+                        <ActivityIndicator
+                            size="large"
+                            color="#EA580C"
+                        />
+                    ) : (
+                        <Ionicons
+                            name="alert-circle-outline"
+                            size={45}
+                            color="#EA580C"
+                        />
+                    )}
 
                     <Text style={styles.stateTitle}>
-                        Unable to load checkout
-                    </Text>
-                    <Text style={styles.stateText}>
-                        {error}
+                        {loading
+                            ? 'Checking your selection…'
+                            : 'Unable to load checkout'}
                     </Text>
 
-                    <TouchableOpacity
-                        style={styles.primaryButton}
-                        onPress={() =>
-                            setRetryCount((current) => current + 1)
-                        }
-                        accessibilityRole="button"
-                    >
-                        <Text style={styles.primaryButtonText}>
-                            Try again
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.secondaryButton}
-                        onPress={openMenu}
-                        accessibilityRole="button"
-                    >
-                        <Text style={styles.secondaryButtonText}>
-                            Back to menu
-                        </Text>
-                    </TouchableOpacity>
+                    {!!error && (
+                        <>
+                            <Text style={styles.description}>
+                                {error}
+                            </Text>
+                            <TouchableOpacity
+                                style={styles.primaryButton}
+                                onPress={() =>
+                                    setRetryCount(
+                                        (current) => current + 1
+                                    )
+                                }
+                            >
+                                <Text style={styles.buttonText}>
+                                    Try again
+                                </Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
                 </View>
             ) : shop && food ? (
-                <ScrollView
-                    contentContainerStyle={styles.content}
-                    showsVerticalScrollIndicator={false}
+                <KeyboardAvoidingView
+                    style={styles.flex}
+                    behavior={
+                        Platform.OS === 'ios'
+                            ? 'padding'
+                            : undefined
+                    }
                 >
-                    <View style={styles.hero}>
-                        <View style={styles.heroIcon}>
+                    <ScrollView
+                        contentContainerStyle={styles.content}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <View style={styles.hero}>
                             <Ionicons
                                 name="bag-handle-outline"
-                                size={28}
+                                size={32}
                                 color="#EA580C"
                             />
+                            <Text style={styles.heroTitle}>
+                                A delicious choice.
+                            </Text>
+                            <Text style={styles.heroText}>
+                                Review your meal from {shop.name}.
+                            </Text>
                         </View>
 
-                        <Text style={styles.eyebrow}>
-                            YOUR FOOD BREAK
+                        <Text style={styles.sectionTitle}>
+                            Your selection
                         </Text>
-                        <Text style={styles.heroTitle}>
-                            A delicious choice.
-                        </Text>
-                        <Text style={styles.heroText}>
-                            Review your meal from {shop.name}.
-                        </Text>
-                    </View>
 
-                    <Text style={styles.sectionTitle}>
-                        Your selection
-                    </Text>
-
-                    <View style={styles.card}>
-                        <View style={styles.shopRow}>
-                            <Ionicons
-                                name="storefront-outline"
-                                size={18}
-                                color="#EA580C"
-                            />
+                        <View style={styles.card}>
                             <Text style={styles.shopName}>
                                 {shop.name}
                             </Text>
-                        </View>
 
-                        <Text style={styles.foodName}>
-                            {food.name}
-                        </Text>
-
-                        {!!food.description && (
-                            <Text style={styles.description}>
-                                {food.description}
+                            <Text style={styles.foodName}>
+                                {food.name}
                             </Text>
-                        )}
 
-                        <Text style={styles.unitPrice}>
-                            {formatPrice(food.price)} per item
-                        </Text>
-
-                        <View style={styles.divider} />
-
-                        <Text style={styles.label}>
-                            Quantity
-                        </Text>
-
-                        <QuantitySelector
-                            quantity={quantity}
-                            onChange={setQuantity}
-                        />
-                    </View>
-
-                    <Text style={styles.sectionTitle}>
-                        Collection
-                    </Text>
-
-                    <View style={styles.card}>
-                        <View style={styles.optionRow}>
-                            <View style={styles.optionIcon}>
-                                <Ionicons
-                                    name="bag-handle-outline"
-                                    size={23}
-                                    color="#EA580C"
-                                />
-                            </View>
-
-                            <View style={styles.optionContent}>
-                                <Text style={styles.optionTitle}>
-                                    Pickup from shop
-                                </Text>
+                            {!!food.description && (
                                 <Text style={styles.description}>
-                                    {pickupAvailable
-                                        ? 'Collect your food directly from the shop.'
-                                        : 'Pickup is not available at this shop.'}
+                                    {food.description}
                                 </Text>
-                            </View>
+                            )}
 
-                            <Ionicons
-                                name={
-                                    pickupAvailable
-                                        ? 'checkmark-circle'
-                                        : 'close-circle-outline'
-                                }
-                                size={25}
-                                color={
-                                    pickupAvailable
-                                        ? '#EA580C'
-                                        : '#9CA3AF'
+                            <Text style={styles.price}>
+                                {formatPrice(food.price)} per item
+                            </Text>
+
+                            <View style={styles.divider} />
+
+                            <Text style={styles.label}>
+                                Quantity
+                            </Text>
+                            <QuantitySelector
+                                quantity={quantity}
+                                onChange={setQuantity}
+                                disabled={
+                                    submitting || !!placedOrder
                                 }
                             />
                         </View>
 
-                        {!!shop.address && (
-                            <View style={styles.addressRow}>
+                        <Text style={styles.sectionTitle}>
+                            Collection & payment
+                        </Text>
+
+                        <View style={styles.card}>
+                            <View style={styles.optionRow}>
                                 <Ionicons
-                                    name="location-outline"
-                                    size={17}
-                                    color="#9A3412"
-                                />
-                                <Text style={styles.address}>
-                                    {shop.address}
-                                </Text>
-                            </View>
-                        )}
-
-                        {shop.delivery_available && (
-                            <Text style={styles.note}>
-                                This shop offers delivery. Delivery
-                                checkout is coming soon.
-                            </Text>
-                        )}
-                    </View>
-
-                    <Text style={styles.sectionTitle}>
-                        Payment method
-                    </Text>
-
-                    <View style={styles.card}>
-                        <View style={styles.optionRow}>
-                            <View style={styles.optionIcon}>
-                                <Ionicons
-                                    name="cash-outline"
+                                    name="bag-handle-outline"
                                     size={24}
                                     color="#EA580C"
                                 />
+                                <View style={styles.flex}>
+                                    <Text style={styles.optionTitle}>
+                                        Pickup from shop
+                                    </Text>
+                                    <Text style={styles.description}>
+                                        {pickupAvailable
+                                            ? 'Collect your food at the shop.'
+                                            : 'Pickup is unavailable at this shop.'}
+                                    </Text>
+                                </View>
                             </View>
 
-                            <View style={styles.optionContent}>
-                                <Text style={styles.optionTitle}>
-                                    Cash at pickup
+                            {!!shop.address && (
+                                <Text style={styles.address}>
+                                    {shop.address}
                                 </Text>
-                                <Text style={styles.description}>
-                                    Pay the shop when you collect
-                                    your food.
-                                </Text>
-                            </View>
+                            )}
 
-                            {pickupAvailable && (
+                            <View style={styles.divider} />
+
+                            <View style={styles.optionRow}>
                                 <Ionicons
-                                    name="checkmark-circle"
+                                    name="cash-outline"
                                     size={25}
                                     color="#EA580C"
                                 />
-                            )}
+                                <View style={styles.flex}>
+                                    <Text style={styles.optionTitle}>
+                                        Cash at pickup
+                                    </Text>
+                                    <Text style={styles.description}>
+                                        Pay when you collect your food.
+                                    </Text>
+                                </View>
+                            </View>
                         </View>
 
-                        <Text style={styles.note}>
-                            Online payments are not available yet.
+                        <Text style={styles.sectionTitle}>
+                            Contact details
                         </Text>
-                    </View>
 
-                    <Text style={styles.sectionTitle}>
-                        {pickupAvailable
-                            ? 'Pickup summary'
-                            : 'Food subtotal'}
-                    </Text>
-
-                    <View style={styles.card}>
-                        <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>
-                                Unit price
+                        <View style={styles.card}>
+                            <Text style={styles.label}>
+                                Contact phone number
                             </Text>
-                            <Text style={styles.summaryValue}>
-                                {formatPrice(food.price)}
+                            <TextInput
+                                style={styles.input}
+                                value={phone}
+                                onChangeText={setPhone}
+                                placeholder="077 123 4567"
+                                placeholderTextColor="#9CA3AF"
+                                keyboardType="phone-pad"
+                                maxLength={20}
+                                editable={
+                                    !submitting && !placedOrder
+                                }
+                                accessibilityLabel="Contact phone number"
+                            />
+
+                            <Text style={styles.noteLabel}>
+                                Note to the shop (optional)
+                            </Text>
+                            <TextInput
+                                style={[
+                                    styles.input,
+                                    styles.noteInput,
+                                ]}
+                                value={note}
+                                onChangeText={setNote}
+                                placeholder="Any special instructions?"
+                                placeholderTextColor="#9CA3AF"
+                                multiline
+                                maxLength={500}
+                                textAlignVertical="top"
+                                editable={
+                                    !submitting && !placedOrder
+                                }
+                                accessibilityLabel="Note to the shop"
+                            />
+                            <Text style={styles.counter}>
+                                {note.length} / 500
                             </Text>
                         </View>
 
-                        <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>
-                                Quantity
-                            </Text>
-                            <Text style={styles.summaryValue}>
-                                {quantity}
-                            </Text>
-                        </View>
-
-                        <View style={styles.divider} />
-
-                        <View style={styles.summaryRow}>
+                        <View style={styles.totalCard}>
                             <Text style={styles.totalLabel}>
-                                {pickupAvailable
-                                    ? 'Total'
-                                    : 'Subtotal'}
+                                Pickup total
                             </Text>
                             <Text style={styles.totalPrice}>
                                 {formatPrice(total)}
                             </Text>
                         </View>
-                    </View>
 
-                    <View style={styles.notice}>
-                        <Ionicons
-                            name="information-circle-outline"
-                            size={22}
-                            color="#9A3412"
-                        />
-                        <View style={styles.optionContent}>
-                            <Text style={styles.noticeTitle}>
-                                Ordering is coming soon
+                        <TouchableOpacity
+                            style={[
+                                styles.primaryButton,
+                                (!pickupAvailable ||
+                                    submitting ||
+                                    !!placedOrder) &&
+                                    styles.disabledButton,
+                            ]}
+                            onPress={() => void placeOrder()}
+                            disabled={
+                                !pickupAvailable ||
+                                submitting ||
+                                !!placedOrder
+                            }
+                            accessibilityRole="button"
+                            accessibilityLabel="Place order"
+                        >
+                            {submitting ? (
+                                <ActivityIndicator
+                                    color="#FFFFFF"
+                                />
+                            ) : (
+                                <>
+                                    <Ionicons
+                                        name="bag-check-outline"
+                                        size={21}
+                                        color="#FFFFFF"
+                                    />
+                                    <Text style={styles.buttonText}>
+                                        Place order
+                                    </Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+
+                        <Text style={styles.paymentNote}>
+                            No online payment is collected.
+                            Pay the shop at pickup.
+                        </Text>
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            ) : null}
+
+            <Modal
+                visible={!!placedOrder}
+                transparent
+                animationType="fade"
+                onRequestClose={finishOrder}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.successCard}>
+                        <View style={styles.successIcon}>
+                            <Ionicons
+                                name="checkmark"
+                                size={42}
+                                color="#EA580C"
+                            />
+                        </View>
+
+                        <Text style={styles.successTitle}>
+                            Order placed!
+                        </Text>
+
+                        <Text style={styles.successText}>
+                            Thank you! Your order has been saved
+                            and is waiting for the shop to accept it.
+                        </Text>
+
+                        <View style={styles.orderDetails}>
+                            <Text style={styles.orderReference}>
+                                Order ID
                             </Text>
-                            <Text style={styles.noticeText}>
-                                This is a checkout preview. Your
-                                selection has not been sent to the
-                                shop.
+                            <Text
+                                selectable
+                                style={styles.orderId}
+                            >
+                                {placedOrder?.id}
+                            </Text>
+                            <Text style={styles.successTotal}>
+                                {formatPrice(
+                                    placedOrder?.total_amount ?? 0
+                                )}
+                            </Text>
+                            <Text style={styles.description}>
+                                Status: Placed · Cash at pickup
                             </Text>
                         </View>
+
+                        <TouchableOpacity
+                            style={styles.primaryButton}
+                            onPress={finishOrder}
+                            accessibilityRole="button"
+                        >
+                            <Text style={styles.buttonText}>
+                                Done
+                            </Text>
+                        </TouchableOpacity>
                     </View>
-
-                    <TouchableOpacity
-                        style={styles.disabledButton}
-                        disabled
-                        accessibilityRole="button"
-                        accessibilityState={{ disabled: true }}
-                    >
-                        <Ionicons
-                            name="bag-check-outline"
-                            size={20}
-                            color="#FFFFFF"
-                        />
-                        <Text style={styles.primaryButtonText}>
-                            Place order · Coming soon
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.secondaryButton}
-                        onPress={openMenu}
-                        accessibilityRole="button"
-                    >
-                        <Text style={styles.secondaryButtonText}>
-                            Back to menu
-                        </Text>
-                    </TouchableOpacity>
-                </ScrollView>
-            ) : null}
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -546,6 +749,9 @@ const styles = StyleSheet.create({
     screen: {
         flex: 1,
         backgroundColor: '#FFFAF5',
+    },
+    flex: {
+        flex: 1,
     },
     header: {
         flexDirection: 'row',
@@ -559,17 +765,15 @@ const styles = StyleSheet.create({
         height: 44,
         borderRadius: 14,
         backgroundColor: '#FFFFFF',
-        borderWidth: 1,
-        borderColor: '#F0E7DE',
         alignItems: 'center',
         justifyContent: 'center',
     },
     headerTitle: {
-        fontSize: 19,
+        fontSize: 20,
         fontWeight: '700',
         color: '#1F2937',
     },
-    headerSubtitle: {
+    subtitle: {
         marginTop: 3,
         fontSize: 12,
         color: '#6B7280',
@@ -578,35 +782,19 @@ const styles = StyleSheet.create({
         width: '100%',
         maxWidth: 650,
         alignSelf: 'center',
-        paddingHorizontal: 20,
-        paddingTop: 8,
-        paddingBottom: 28,
+        padding: 20,
+        paddingBottom: 32,
     },
     hero: {
         padding: 22,
+        marginBottom: 24,
         borderRadius: 24,
+        backgroundColor: '#FFF1E2',
         borderWidth: 1,
         borderColor: '#FED7AA',
-        backgroundColor: '#FFF1E2',
-        marginBottom: 24,
-    },
-    heroIcon: {
-        width: 52,
-        height: 52,
-        borderRadius: 17,
-        backgroundColor: '#FFFFFF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
-    },
-    eyebrow: {
-        fontSize: 10,
-        fontWeight: '800',
-        letterSpacing: 1.4,
-        color: '#C2410C',
     },
     heroTitle: {
-        marginTop: 10,
+        marginTop: 14,
         fontSize: 27,
         fontWeight: '800',
         color: '#431407',
@@ -618,27 +806,21 @@ const styles = StyleSheet.create({
         color: '#9A3412',
     },
     sectionTitle: {
+        marginBottom: 12,
         fontSize: 17,
         fontWeight: '700',
         color: '#1F2937',
-        marginBottom: 12,
     },
     card: {
         padding: 18,
+        marginBottom: 22,
         borderRadius: 20,
         backgroundColor: '#FFFFFF',
         borderWidth: 1,
         borderColor: '#F0E7DE',
-        marginBottom: 22,
-    },
-    shopRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 7,
-        marginBottom: 14,
     },
     shopName: {
-        flex: 1,
+        marginBottom: 10,
         fontSize: 13,
         fontWeight: '600',
         color: '#9A3412',
@@ -649,169 +831,191 @@ const styles = StyleSheet.create({
         color: '#1F2937',
     },
     description: {
-        marginTop: 5,
+        marginTop: 6,
         fontSize: 13,
         lineHeight: 20,
         color: '#6B7280',
     },
-    unitPrice: {
+    price: {
         marginTop: 12,
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '700',
         color: '#EA580C',
     },
     divider: {
         height: 1,
-        backgroundColor: '#F3F4F6',
         marginVertical: 16,
+        backgroundColor: '#F3F4F6',
     },
     label: {
         marginBottom: 10,
         fontSize: 13,
         fontWeight: '600',
-        color: '#6B7280',
+        color: '#374151',
     },
     optionRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
     },
-    optionIcon: {
-        width: 46,
-        height: 46,
-        borderRadius: 14,
-        backgroundColor: '#FFF7ED',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    optionContent: {
-        flex: 1,
-    },
     optionTitle: {
         fontSize: 15,
         fontWeight: '700',
         color: '#1F2937',
     },
-    addressRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 6,
-        marginTop: 16,
+    address: {
+        marginTop: 14,
         padding: 12,
         borderRadius: 12,
         backgroundColor: '#FFF7ED',
-    },
-    address: {
-        flex: 1,
-        fontSize: 12,
-        lineHeight: 18,
-        color: '#9A3412',
-    },
-    note: {
-        marginTop: 14,
-        fontSize: 12,
-        lineHeight: 18,
-        color: '#6B7280',
-    },
-    summaryRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-        paddingVertical: 5,
-    },
-    summaryLabel: {
-        fontSize: 14,
-        color: '#6B7280',
-    },
-    summaryValue: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#1F2937',
-    },
-    totalLabel: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#1F2937',
-    },
-    totalPrice: {
-        fontSize: 22,
-        fontWeight: '800',
-        color: '#EA580C',
-    },
-    notice: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 10,
-        padding: 16,
-        borderRadius: 16,
-        backgroundColor: '#FFEDD5',
-        marginBottom: 18,
-    },
-    noticeTitle: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#9A3412',
-    },
-    noticeText: {
-        marginTop: 5,
         fontSize: 13,
         lineHeight: 20,
         color: '#9A3412',
     },
-    disabledButton: {
+    input: {
+        paddingHorizontal: 14,
+        paddingVertical: 13,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#FED7AA',
+        backgroundColor: '#FFFAF5',
+        fontSize: 14,
+        color: '#1F2937',
+    },
+    noteLabel: {
+        marginTop: 18,
+        marginBottom: 10,
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#374151',
+    },
+    noteInput: {
+        minHeight: 100,
+    },
+    counter: {
+        marginTop: 7,
+        fontSize: 11,
+        textAlign: 'right',
+        color: '#9CA3AF',
+    },
+    totalCard: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 10,
+        padding: 18,
+        marginBottom: 18,
+        borderRadius: 18,
+        backgroundColor: '#FFEDD5',
+    },
+    totalLabel: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#9A3412',
+    },
+    totalPrice: {
+        fontSize: 23,
+        fontWeight: '800',
+        color: '#EA580C',
+    },
+    primaryButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
         minHeight: 54,
-        padding: 14,
-        borderRadius: 16,
-        backgroundColor: '#9CA3AF',
-    },
-    primaryButton: {
-        marginTop: 22,
-        paddingHorizontal: 24,
+        paddingHorizontal: 22,
         paddingVertical: 14,
-        borderRadius: 14,
+        borderRadius: 16,
         backgroundColor: '#EA580C',
     },
-    primaryButtonText: {
-        fontSize: 14,
+    disabledButton: {
+        backgroundColor: '#9CA3AF',
+    },
+    buttonText: {
+        fontSize: 15,
         fontWeight: '700',
         color: '#FFFFFF',
         textAlign: 'center',
     },
-    secondaryButton: {
-        minHeight: 48,
-        padding: 14,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 8,
-    },
-    secondaryButtonText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#EA580C',
+    paymentNote: {
+        marginTop: 12,
+        fontSize: 12,
+        lineHeight: 18,
+        textAlign: 'center',
+        color: '#6B7280',
     },
     center: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 14,
         padding: 28,
     },
     stateTitle: {
-        marginTop: 16,
         fontSize: 18,
         fontWeight: '700',
         textAlign: 'center',
         color: '#1F2937',
     },
-    stateText: {
-        marginTop: 8,
+    modalOverlay: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        backgroundColor: 'rgba(17, 24, 39, 0.55)',
+    },
+    successCard: {
+        width: '100%',
+        maxWidth: 420,
+        padding: 24,
+        borderRadius: 28,
+        backgroundColor: '#FFFFFF',
+    },
+    successIcon: {
+        width: 86,
+        height: 86,
+        alignSelf: 'center',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 28,
+        backgroundColor: '#FFEDD5',
+    },
+    successTitle: {
+        marginTop: 20,
+        fontSize: 27,
+        fontWeight: '800',
+        textAlign: 'center',
+        color: '#431407',
+    },
+    successText: {
+        marginTop: 10,
         fontSize: 14,
         lineHeight: 22,
         textAlign: 'center',
         color: '#6B7280',
+    },
+    orderDetails: {
+        padding: 16,
+        marginVertical: 20,
+        borderRadius: 16,
+        backgroundColor: '#FFF7ED',
+    },
+    orderReference: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#9A3412',
+    },
+    orderId: {
+        marginTop: 5,
+        fontSize: 12,
+        color: '#374151',
+    },
+    successTotal: {
+        marginTop: 14,
+        fontSize: 23,
+        fontWeight: '800',
+        color: '#EA580C',
     },
 });
