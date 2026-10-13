@@ -32,7 +32,7 @@ export default function HomeScreen() {
                 <SearchBox />
                 <BannerCarousel />
                 <CategoriesSection />
-                <EmergencyStrip onCall={() => {}} />
+                <EmergencyStrip />
                 <FeaturedBoardings onSeeAll={() => {}} />
                 <FoodShops onSeeAll={() => {}} />
                 <NearYou onSeeAll={() => {}} />
