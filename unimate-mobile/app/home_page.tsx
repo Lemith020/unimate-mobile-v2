@@ -33,7 +33,7 @@ export default function HomeScreen() {
                 <BannerCarousel />
                 <CategoriesSection />
                 <EmergencyStrip />
-                <FeaturedBoardings onSeeAll={() => {}} />
+                <FeaturedBoardings />
                 <FoodShops onSeeAll={() => {}} />
                 <NearYou onSeeAll={() => {}} />
                 <MarketplaceSection onSeeAll={() => {}} />

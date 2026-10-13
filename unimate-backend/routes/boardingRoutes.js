@@ -1,22 +1,29 @@
 const express = require('express');
 
 const {
-    getBoardingsByUniversity,
-    getBoardingById,
+  getBoardingsByUniversity,
+  getFeaturedBoardingsByUniversity,
+  getBoardingById,
 } = require('../controllers/boardingController');
 
 const router = express.Router();
 
-// List boardings for a university.
+// Featured boardings for a university.
 router.get(
-    '/university/:universityId',
-    getBoardingsByUniversity
+  '/featured/university/:universityId',
+  getFeaturedBoardingsByUniversity
 );
 
-// Get one boarding's details.
+// All boardings for a university.
 router.get(
-    '/:id',
-    getBoardingById
+  '/university/:universityId',
+  getBoardingsByUniversity
+);
+
+// One boarding's details.
+router.get(
+  '/:id',
+  getBoardingById
 );
 
 module.exports = router;
