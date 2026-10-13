@@ -186,14 +186,21 @@ export default function BoardingsScreen() {
 
     );
 
+const handleBoardingPress = (boarding) => {
+    if (!boarding?.id) {
+        Alert.alert('Error', 'Boarding ID is missing');
+        return;
+    }
 
-    const handleBoardingPress = (boarding) => {
+    console.log('OPEN BOARDING ID:', boarding.id);
 
-        router.push(
-            `/boardings/${boarding.id}`
-        );
-
-    };
+    router.push({
+        pathname: '/boardings/[id]',
+        params: {
+            id: String(boarding.id),
+        },
+    });
+};
 
 
     if (loading) {

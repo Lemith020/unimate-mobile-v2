@@ -46,7 +46,7 @@ export default function BoardingDetailsScreen() {
 
                     setLoading(true);
 
-
+                    console.log('DETAIL PAGE ID:', id);
                     const response =
                         await fetch(
                             `http://10.0.2.2:5000/api/boardings/${id}`
@@ -82,6 +82,9 @@ export default function BoardingDetailsScreen() {
                         return;
 
                     }
+
+                    console.log('DETAIL API STATUS:', response.status);
+                    console.log('DETAIL API DATA:', JSON.stringify(data));
 
 
                     if (!response.ok) {
