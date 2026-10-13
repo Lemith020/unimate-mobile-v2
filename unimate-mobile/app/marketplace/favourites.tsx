@@ -468,5 +468,4 @@ const styles = StyleSheet.create({
     },
 });
 
-// kmkmk
 
