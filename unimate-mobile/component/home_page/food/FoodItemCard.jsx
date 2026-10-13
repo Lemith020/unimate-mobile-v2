@@ -12,7 +12,7 @@ import QuantitySelector from './QuantitySelector';
 
 export default function FoodItemCard({
     food,
-    imageSource,
+    imageSource = null,
     isFavourite = false,
     quantity = 1,
     onToggleFavourite,
