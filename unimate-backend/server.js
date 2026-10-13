@@ -9,6 +9,7 @@ const profileRoutes = require('./routes/profileRoutes');
 const universityRoutes = require('./routes/universityRoutes');
 const boardingRoutes = require('./routes/boardingRoutes');
 const foodRoutes = require('./routes/foodRoutes');
+const pharmacyRoutes = require('./routes/pharmacyRoutes');
 
 // Create app
 const app = express();
@@ -23,6 +24,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api', universityRoutes);
 app.use('/api/boardings', boardingRoutes);
 app.use('/api/food', foodRoutes);
+app.use('/api/pharmacy', pharmacyRoutes);
 
 // Test endpoint
 app.get('/', (req, res) => {
@@ -32,6 +34,7 @@ app.get('/', (req, res) => {
 });
 
 // Handle unknown routes
+// Keep this after all API routes.
 app.use((req, res) => {
   res.status(404).json({
     error: 'API route not found',

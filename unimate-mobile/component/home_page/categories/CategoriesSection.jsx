@@ -27,7 +27,7 @@ export default function CategoriesSection() {
                 />
 
                 <PharmacyCard
-                    onPress={() => alert('Pharmacy clicked')}
+                    onPress={() => router.push('/pharmacy')}
                 />
 
                 <HealthCard
