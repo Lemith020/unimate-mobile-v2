@@ -27,12 +27,12 @@ export default function CategoriesSection() {
                 />
 
                 <PharmacyCard
-                    onPress={() => router.push('/pharmacy')}
+                    onPress={() => alert('Pharmacy clicked')}
                 />
 
-                <HealthCard
+                {/*<HealthCard
                     onPress={() => alert('Health clicked')}
-                />
+                />*/}
 
                 <TransportCard
                     onPress={() => alert('Transport clicked')}
@@ -67,3 +67,4 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
 });
+
