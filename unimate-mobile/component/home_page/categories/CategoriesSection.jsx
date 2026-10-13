@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import BoardingCard from './BoardingCard';
 import FoodCard from './FoodCard';
 import PharmacyCard from './PharmacyCard';
-import HealthCard from './HealthCard';
+// import HealthCard from './HealthCard';
 import TransportCard from './TransportCard';
 import ServiceCard from './ServiceCard';
 import MarketplaceCard from './MarketplaceCard';
@@ -27,12 +27,14 @@ export default function CategoriesSection() {
                 />
 
                 <PharmacyCard
-                    onPress={() => alert('Pharmacy clicked')}
+                    onPress={() => router.push('/pharmacy')}
                 />
 
-                {/*<HealthCard
+                {/* Temporarily hidden
+                <HealthCard
                     onPress={() => alert('Health clicked')}
-                />*/}
+                />
+                */}
 
                 <TransportCard
                     onPress={() => alert('Transport clicked')}
@@ -43,7 +45,7 @@ export default function CategoriesSection() {
                 />
 
                 <MarketplaceCard
-                    onPress={() => alert('Marketplace clicked')}
+                    onPress={() => router.push('/marketplace')}
                 />
             </View>
         </View>
@@ -67,4 +69,3 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
 });
-
