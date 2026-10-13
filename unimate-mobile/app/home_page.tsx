@@ -35,8 +35,8 @@ export default function HomeScreen() {
                 <EmergencyStrip />
                 <FeaturedBoardings />
                 <FoodShops />
-                <NearYou onSeeAll={() => {}} />
-                <MarketplaceSection onSeeAll={() => {}} />
+                <NearYou />
+                <MarketplaceSection />
             </ScrollView>
             <NavigationBar />
 
