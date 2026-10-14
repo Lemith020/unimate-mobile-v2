@@ -39,10 +39,13 @@ export default function NavigationBar() {
           }
         }}
       />
-
       <ExploreNav
-        active={!notificationsActive && activeTab === 'Explore'}
-        onPress={() => setActiveTab('Explore')}
+        active={pathname === '/explore'}
+        onPress={() => {
+          if (pathname !== '/explore') {
+            router.push('/explore');
+          }
+        }}
       />
 
       <ChatNav
