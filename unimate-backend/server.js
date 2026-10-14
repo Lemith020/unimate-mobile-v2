@@ -11,6 +11,7 @@ const boardingRoutes = require('./routes/boardingRoutes');
 const foodRoutes = require('./routes/foodRoutes');
 const pharmacyRoutes = require('./routes/pharmacyRoutes');
 const marketplaceRoutes = require('./routes/marketplaceRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
 // Create app
 const app = express();
@@ -41,6 +42,8 @@ app.use((req, res) => {
         error: 'API route not found',
     });
 });
+
+app.use('/api/orders', orderRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5000;

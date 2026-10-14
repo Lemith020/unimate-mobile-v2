@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,18 +9,47 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import HomeNav from './HomeNav';
-import ExploreNav from './ExploreNav';
-import ChatNav from './ChatNav';
+const TABS = [
+  {
+    label: 'Home',
+    route: '/home_page',
+    icon: 'home-outline',
+    activeIcon: 'home',
+  },
+  {
+    label: 'Explore',
+    route: '/explore',
+    icon: 'compass-outline',
+    activeIcon: 'compass',
+  },
+  {
+    label: 'Orders',
+    route: '/my-orders',
+    icon: 'receipt-outline',
+    activeIcon: 'receipt',
+  },
+  {
+    label: 'Notifications',
+    route: '/notifications',
+    icon: 'notifications-outline',
+    activeIcon: 'notifications',
+  },
+];
 
 export default function NavigationBar() {
-  const [activeTab, setActiveTab] = useState('Home');
-
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
-  const notificationsActive = pathname === '/notifications';
+  const openTab = (route) => {
+    if (pathname === route) return;
+
+    if (route === '/home_page') {
+      router.replace('/home_page');
+    } else {
+      router.push(route);
+    }
+  };
 
   return (
     <View
@@ -29,61 +58,46 @@ export default function NavigationBar() {
         { paddingBottom: Math.max(insets.bottom, 10) },
       ]}
     >
-      <HomeNav
-        active={!notificationsActive && activeTab === 'Home'}
-        onPress={() => {
-          setActiveTab('Home');
+      {TABS.map((tab) => {
+        const active = pathname === tab.route;
+        const color = active ? '#F97316' : '#78716C';
 
-          if (notificationsActive) {
-            router.replace('/home_page');
-          }
-        }}
-      />
-      <ExploreNav
-        active={pathname === '/explore'}
-        onPress={() => {
-          if (pathname !== '/explore') {
-            router.push('/explore');
-          }
-        }}
-      />
+        return (
+          <TouchableOpacity
+            key={tab.route}
+            style={styles.tab}
+            activeOpacity={0.75}
+            onPress={() => openTab(tab.route)}
+            accessibilityRole="button"
+            accessibilityLabel={tab.label}
+            accessibilityState={{ selected: active }}
+          >
+            <View
+              style={[
+                styles.iconContainer,
+                active && styles.activeIconContainer,
+              ]}
+            >
+              <Ionicons
+                name={active ? tab.activeIcon : tab.icon}
+                size={24}
+                color={color}
+              />
+            </View>
 
-      <ChatNav
-        active={!notificationsActive && activeTab === 'Chats'}
-        onPress={() => setActiveTab('Chats')}
-      />
-
-      <TouchableOpacity
-        style={styles.notificationTab}
-        activeOpacity={0.7}
-        onPress={() => {
-          if (!notificationsActive) {
-            router.push('/notifications');
-          }
-        }}
-        accessibilityRole="button"
-        accessibilityLabel="Notifications"
-        accessibilityState={{ selected: notificationsActive }}
-      >
-        <Ionicons
-          name={
-            notificationsActive
-              ? 'notifications'
-              : 'notifications-outline'
-          }
-          size={25}
-          color={notificationsActive ? '#F97316' : '#858585'}
-        />
-
-        <Text
-          style={[
-            styles.label,
-            notificationsActive && styles.activeLabel,
-          ]}
-        >
-          Notifications
-        </Text>
-      </TouchableOpacity>
+            <Text
+              style={[
+                styles.label,
+                { color },
+                active && styles.activeLabel,
+              ]}
+              numberOfLines={1}
+            >
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -91,32 +105,44 @@ export default function NavigationBar() {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#FFFBEB',
-    paddingTop: 10,
-    paddingHorizontal: 16,
-    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    paddingTop: 8,
+    paddingHorizontal: 8,
     borderTopWidth: 1,
     borderTopColor: '#FFEDD5',
-    elevation: 15,
+    elevation: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
+    shadowOffset: {
+      width: 0,
+      height: -3,
+    },
+    shadowOpacity: 0.08,
     shadowRadius: 5,
   },
-  notificationTab: {
-    minHeight: 48,
+  tab: {
+    flex: 1,
+    minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
-    gap: 5,
+    paddingHorizontal: 2,
+  },
+  iconContainer: {
+    width: 48,
+    height: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeIconContainer: {
+    backgroundColor: '#FFEDD5',
   },
   label: {
+    marginTop: 4,
     fontSize: 10,
-    fontWeight: '600',
-    color: '#858585',
+    fontWeight: '500',
   },
   activeLabel: {
-    color: '#F97316',
+    fontWeight: '700',
   },
 });
