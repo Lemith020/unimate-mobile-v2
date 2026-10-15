@@ -56,7 +56,7 @@ export default function MenuDrawer({ visible, onClose }) {
                 <View style={styles.drawerContainer}>
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                        {/* මෙන්න මෙතැනට fullName එක පාස් කරනවා */}
+                        
                         <MenuHeader fullName={fullName} universityName="University of Kelaniya" />
 
                         <ActivitySection />
