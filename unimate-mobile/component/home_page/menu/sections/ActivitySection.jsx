@@ -5,11 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 export default function ActivitySection({ onNavigate }) {
     const items = [
         
-        { icon: 'home-outline', label: 'Home', showChevron: false },
-        { icon: 'notifications-outline', label: 'Notifications' },
-        { icon: 'heart-outline', label: 'Saved' },
-        { icon: 'document-text-outline', label: 'My Applications' },
-        { icon: 'receipt-outline', label: 'My Orders' },
+        // { icon: 'home-outline', label: 'Home', showChevron: false },
+        // { icon: 'notifications-outline', label: 'Notifications' },
+        // { icon: 'heart-outline', label: 'Saved' },
+        // { icon: 'document-text-outline', label: 'My Applications' },
+        // { icon: 'receipt-outline', label: 'My Orders' },
     ];
 
     return (
