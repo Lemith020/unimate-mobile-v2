@@ -12,8 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Android emulator.
-// Physical phone එකේදී ඔයාගේ computer එකේ LAN IP එක දාන්න.
+
 const API_BASE_URL = 'http://10.0.2.2:5000/api';
 
 function formatDistance(value) {
