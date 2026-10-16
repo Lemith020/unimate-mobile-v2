@@ -170,7 +170,7 @@ export default function RegisterScreen() {
             <Ionicons
               name="school"
               size={40}
-              color="#ff7f00"
+              color="#eb920b"
             />
           </View>
 
@@ -282,7 +282,7 @@ export default function RegisterScreen() {
             <Ionicons
               name="school-outline"
               size={20}
-              color="#ff7f00"
+              color="#e17911"
               style={styles.inputIcon}
             />
 
@@ -377,7 +377,7 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder="Current Address"
-              placeholderTextColor="#999"
+              placeholderTextColor="#8c8c8c"
               value={currentAddress}
               onChangeText={setCurrentAddress}
             />
@@ -456,7 +456,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff8f0',
+    backgroundColor: '#d6ac9b',
   },
 
   scrollContainer: {
