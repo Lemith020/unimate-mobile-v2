@@ -177,7 +177,7 @@ export default function Header({
                         <Ionicons
                             name="location-sharp"
                             size={14}
-                            color="#f97316"
+                            color="#dee8e0"
                         />
 
 
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
 
     headerContainer: {
 
-        backgroundColor: '#F97316',
+        backgroundColor: '#FF6B00',
 
         paddingTop: 50,
 
