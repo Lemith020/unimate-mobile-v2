@@ -10,19 +10,19 @@ const SIDE_PADDING = (width - CARD_WIDTH) / 2;
 const banners = [
     {
         id: '1',
-        title: 'Lassanata hadana Rasata kana Rice & Curry Rs. 250i!',
+        title: 'Food Shops',
         buttonText: 'Order Now',
         image: { uri: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600' },
     },
     {
         id: '2',
-        title: 'Oyata galapena boarding eka dan lesiyenma hoyaganna.',
+        title: 'Find New Boarding Places',
         buttonText: 'Explore Boardings',
         image: { uri: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600' },
     },
     {
         id: '3',
-        title: 'Parana poth saha fan aduwata ikmanata ganna.',
+        title: 'Marketplace',
         buttonText: 'Visit Marketplace',
         image: { uri: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=600' },
     },
