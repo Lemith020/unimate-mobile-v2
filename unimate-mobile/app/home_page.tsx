@@ -18,8 +18,24 @@ import ProfileModal from '../component/home_page/profile/ProfileModal';
 
 export default function HomeScreen() {
     const [menuVisible, setMenuVisible] = useState(false);
-    const [profileVisible, setProfileVisible] = useState(false); 
+    const [profileVisible, setProfileVisible] = useState(false);
+    
+    
 
+console.log('HOME COMPONENT CHECK:', {
+    Header: typeof Header,
+    SearchBox: typeof SearchBox,
+    BannerCarousel: typeof BannerCarousel,
+    CategoriesSection: typeof CategoriesSection,
+    EmergencyStrip: typeof EmergencyStrip,
+    FeaturedBoardings: typeof FeaturedBoardings,
+    FoodShops: typeof FoodShops,
+    NearYou: typeof NearYou,
+    MarketplaceSection: typeof MarketplaceSection,
+    NavigationBar: typeof NavigationBar,
+    MenuDrawer: typeof MenuDrawer,
+    ProfileModal: typeof ProfileModal,
+});
     
 
     return (

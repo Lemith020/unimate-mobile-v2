@@ -14,7 +14,6 @@ const marketplaceRoutes = require('./routes/marketplaceRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 
-// Create app
 const app = express();
 
 // Middleware
@@ -29,6 +28,8 @@ app.use('/api/boardings', boardingRoutes);
 app.use('/api/food', foodRoutes);
 app.use('/api/pharmacy', pharmacyRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/search', searchRoutes);
 
 // Test endpoint
 app.get('/', (req, res) => {
@@ -37,16 +38,12 @@ app.get('/', (req, res) => {
     });
 });
 
-app.use('/api/search', searchRoutes);
-
-// Handle unknown routes
+// Keep the 404 handler after all routes.
 app.use((req, res) => {
     res.status(404).json({
         error: 'API route not found',
     });
 });
-
-app.use('/api/orders', orderRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5000;

@@ -18,6 +18,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 
+import NavigationBar from '../component/home_page/navigation_bar/NavigationBar';
+
 const API_BASE_URL = 'http://10.0.2.2:5000/api';
 
 type Category = 'all' | 'food' | 'pharmacy' | 'boarding';
@@ -87,7 +89,10 @@ function numberOrNull(value: unknown): number | null {
   return Number.isFinite(number) ? number : null;
 }
 
-function validCoordinates(latitude: number | null, longitude: number | null) {
+function validCoordinates(
+  latitude: number | null,
+  longitude: number | null
+) {
   return (
     latitude !== null &&
     longitude !== null &&
@@ -120,9 +125,8 @@ function normalizePlace(
 
   if (kind === 'boarding' && row.status !== 'published') return null;
 
-  const image = kind === 'boarding'
-    ? row.image_url
-    : row.cover_image_url;
+  const image =
+    kind === 'boarding' ? row.image_url : row.cover_image_url;
 
   return {
     id: row.id,
@@ -131,14 +135,16 @@ function normalizePlace(
     latitude: latitude!,
     longitude: longitude!,
     distance,
-    imageUrl: typeof image === 'string' && image.trim()
-      ? image.trim()
-      : null,
-    isOpen: row.is_open_now === true
-      ? true
-      : row.is_open_now === false
-        ? false
+    imageUrl:
+      typeof image === 'string' && image.trim()
+        ? image.trim()
         : null,
+    isOpen:
+      row.is_open_now === true
+        ? true
+        : row.is_open_now === false
+          ? false
+          : null,
     rooms: numberOrNull(row.available_rooms),
   };
 }
@@ -148,10 +154,12 @@ function getStatus(place: Place) {
     if (place.rooms === null || place.rooms < 0) {
       return 'Availability unknown';
     }
+
     return place.rooms > 0 ? 'Rooms available' : 'Full';
   }
 
   if (place.isOpen === null) return 'Hours unavailable';
+
   return place.isOpen ? 'Open now' : 'Closed';
 }
 
@@ -186,6 +194,7 @@ function PlacePhoto({ place }: { place: Place }) {
 
 export default function ExploreScreen() {
   const router = useRouter();
+
   const mapRef = useRef<MapView | null>(null);
   const locationBusy = useRef(false);
   const mounted = useRef(false);
@@ -218,6 +227,7 @@ export default function ExploreScreen() {
 
         try {
           const stored = await AsyncStorage.getItem('userData');
+
           if (!active) return;
 
           const user = stored ? JSON.parse(stored) : null;
@@ -265,7 +275,9 @@ export default function ExploreScreen() {
               const data = await response.json();
 
               if (!response.ok || !Array.isArray(data[source.key])) {
-                throw new Error(data?.error || 'Unable to load places');
+                throw new Error(
+                  data?.error || 'Unable to load places'
+                );
               }
 
               return { source, data };
@@ -282,7 +294,9 @@ export default function ExploreScreen() {
             const result = results[index];
 
             if (result.status === 'rejected') {
-              failed.push(CATEGORY_INFO[sources[index].kind].label);
+              failed.push(
+                CATEGORY_INFO[sources[index].kind].label
+              );
               continue;
             }
 
@@ -307,11 +321,11 @@ export default function ExploreScreen() {
 
             for (const row of data[source.key]) {
               const place = normalizePlace(row, source.kind);
+
               if (place) combined.push(place);
             }
           }
 
-          // Food/pharmacy APIs return the university coordinates.
           if (!university) {
             throw new Error(
               'Unable to load your university location. Please try again.'
@@ -355,8 +369,11 @@ export default function ExploreScreen() {
   );
 
   const goBack = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace('/home_page');
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/home_page');
+    }
   };
 
   const centerCampus = () => {
@@ -380,7 +397,9 @@ export default function ExploreScreen() {
     setLocating(true);
 
     try {
-      const permission = await Location.requestForegroundPermissionsAsync();
+      const permission =
+        await Location.requestForegroundPermissionsAsync();
+
       if (!mounted.current) return;
 
       if (permission.status !== 'granted') {
@@ -392,10 +411,14 @@ export default function ExploreScreen() {
       }
 
       const enabled = await Location.hasServicesEnabledAsync();
+
       if (!mounted.current) return;
 
       if (!enabled) {
-        Alert.alert('Location is off', 'Turn on your phone location and try again.');
+        Alert.alert(
+          'Location is off',
+          'Turn on your phone location and try again.'
+        );
         return;
       }
 
@@ -418,10 +441,14 @@ export default function ExploreScreen() {
       );
     } catch {
       if (mounted.current) {
-        Alert.alert('Location unavailable', 'Unable to find your location. Please try again.');
+        Alert.alert(
+          'Location unavailable',
+          'Unable to find your location. Please try again.'
+        );
       }
     } finally {
       locationBusy.current = false;
+
       if (mounted.current) setLocating(false);
     }
   };
@@ -455,237 +482,315 @@ export default function ExploreScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={goBack}
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-        >
-          <Ionicons name="arrow-back" size={23} color="#431407" />
-        </TouchableOpacity>
-
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Explore</Text>
-          <Text style={styles.subtitle} numberOfLines={1}>
-            {campus?.name || 'Discover places around campus'}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.iconButton}
-          disabled={loading}
-          onPress={() => setReloadKey((value) => value + 1)}
-          accessibilityLabel="Refresh places"
-          accessibilityRole="button"
-        >
-          <Ionicons name="refresh" size={22} color="#EA580C" />
-        </TouchableOpacity>
-      </View>
-
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#F97316" />
-          <Text style={styles.message}>Loading your campus map...</Text>
-        </View>
-      ) : error || !campus ? (
-        <View style={styles.center}>
-          <Ionicons name="map-outline" size={48} color="#FB923C" />
-          <Text style={styles.message}>{error || 'Map unavailable.'}</Text>
+    <SafeAreaView
+      style={styles.screen}
+      edges={['top', 'left', 'right']}
+    >
+      <View style={styles.content}>
+        <View style={styles.header}>
           <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => setReloadKey((value) => value + 1)}
+            style={styles.iconButton}
+            onPress={goBack}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
-            <Text style={styles.primaryText}>Try again</Text>
+            <Ionicons
+              name="arrow-back"
+              size={23}
+              color="#431407"
+            />
+          </TouchableOpacity>
+
+          <View style={styles.headerText}>
+            <Text style={styles.title}>Explore</Text>
+
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {campus?.name || 'Discover places around campus'}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.iconButton}
+            disabled={loading}
+            onPress={() => setReloadKey((value) => value + 1)}
+            accessibilityLabel="Refresh places"
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name="refresh"
+              size={22}
+              color="#EA580C"
+            />
           </TouchableOpacity>
         </View>
-      ) : (
-        <>
-          <View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filters}
-            >
-              {FILTERS.map((filter) => (
-                <TouchableOpacity
-                  key={filter.key}
-                  style={[
-                    styles.filter,
-                    category === filter.key && styles.activeFilter,
-                  ]}
-                  onPress={() => {
-                    setCategory(filter.key);
-                    setSelected(null);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: category === filter.key }}
-                >
-                  <Text
-                    style={[
-                      styles.filterText,
-                      category === filter.key && styles.activeFilterText,
-                    ]}
-                  >
-                    {filter.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+
+        {loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color="#F97316" />
+
+            <Text style={styles.message}>
+              Loading your campus map...
+            </Text>
           </View>
+        ) : error || !campus ? (
+          <View style={styles.center}>
+            <Ionicons
+              name="map-outline"
+              size={48}
+              color="#FB923C"
+            />
 
-          {warning ? <Text style={styles.warning}>{warning}</Text> : null}
+            <Text style={styles.message}>
+              {error || 'Map unavailable.'}
+            </Text>
 
-          <View style={styles.mapContainer}>
-            <MapView
-              ref={mapRef}
-              style={StyleSheet.absoluteFill}
-              initialRegion={{
-                latitude: campus.latitude,
-                longitude: campus.longitude,
-                latitudeDelta: 0.055,
-                longitudeDelta: 0.055,
-              }}
-              showsUserLocation={showUserLocation}
-              showsMyLocationButton={false}
-              onPress={() => setSelected(null)}
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => setReloadKey((value) => value + 1)}
             >
-              <Marker
-                coordinate={{
+              <Text style={styles.primaryText}>Try again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filters}
+              >
+                {FILTERS.map((filter) => (
+                  <TouchableOpacity
+                    key={filter.key}
+                    style={[
+                      styles.filter,
+                      category === filter.key &&
+                        styles.activeFilter,
+                    ]}
+                    onPress={() => {
+                      setCategory(filter.key);
+                      setSelected(null);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      selected: category === filter.key,
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.filterText,
+                        category === filter.key &&
+                          styles.activeFilterText,
+                      ]}
+                    >
+                      {filter.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {!!warning && (
+              <Text style={styles.warning}>{warning}</Text>
+            )}
+
+            <View style={styles.mapContainer}>
+              <MapView
+                ref={mapRef}
+                style={StyleSheet.absoluteFill}
+                initialRegion={{
                   latitude: campus.latitude,
                   longitude: campus.longitude,
+                  latitudeDelta: 0.055,
+                  longitudeDelta: 0.055,
                 }}
-                title={campus.name}
-                description="Your university"
-                pinColor="#7C3AED"
-              />
-
-              {visiblePlaces.map((place) => (
+                showsUserLocation={showUserLocation}
+                showsMyLocationButton={false}
+                onPress={() => setSelected(null)}
+              >
                 <Marker
-                  key={`${place.kind}:${place.id}`}
                   coordinate={{
-                    latitude: place.latitude,
-                    longitude: place.longitude,
+                    latitude: campus.latitude,
+                    longitude: campus.longitude,
                   }}
-                  pinColor={CATEGORY_INFO[place.kind].color}
-                  onPress={(event) => {
-                    event.stopPropagation();
-                    setSelected(place);
-                  }}
-                />
-              ))}
-            </MapView>
-
-            <View style={styles.countBadge}>
-              <Ionicons name="location" size={15} color="#EA580C" />
-              <Text style={styles.countText}>
-                {visiblePlaces.length} places · within 5 km of campus
-              </Text>
-            </View>
-
-            <View style={styles.mapControls}>
-              <TouchableOpacity
-                style={styles.mapButton}
-                onPress={centerCampus}
-                accessibilityLabel="Center on university"
-                accessibilityRole="button"
-              >
-                <Ionicons name="school-outline" size={23} color="#EA580C" />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.mapButton}
-                onPress={findMyLocation}
-                disabled={locating}
-                accessibilityLabel="Show my location"
-                accessibilityRole="button"
-              >
-                {locating ? (
-                  <ActivityIndicator color="#EA580C" />
-                ) : (
-                  <Ionicons name="locate-outline" size={24} color="#EA580C" />
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {selected ? (
-            <View style={styles.bottomCard}>
-              <View style={styles.placeRow}>
-                <PlacePhoto
-                  key={`${selected.kind}:${selected.id}:${selected.imageUrl}`}
-                  place={selected}
+                  title={campus.name}
+                  description="Your university"
+                  pinColor="#7C3AED"
                 />
 
-                <View style={styles.placeInfo}>
-                  <Text style={styles.placeName} numberOfLines={1}>
-                    {selected.name}
-                  </Text>
+                {visiblePlaces.map((place) => (
+                  <Marker
+                    key={`${place.kind}:${place.id}`}
+                    coordinate={{
+                      latitude: place.latitude,
+                      longitude: place.longitude,
+                    }}
+                    pinColor={CATEGORY_INFO[place.kind].color}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      setSelected(place);
+                    }}
+                  />
+                ))}
+              </MapView>
 
-                  <Text style={styles.categoryText}>
-                    {CATEGORY_INFO[selected.kind].label}
-                    {' · '}
-                    {selected.distance < 1
-                      ? `${Math.round(selected.distance * 1000)} m`
-                      : `${selected.distance.toFixed(1)} km`}
-                    {' from campus'}
-                  </Text>
+              <View style={styles.countBadge}>
+                <Ionicons
+                  name="location"
+                  size={15}
+                  color="#EA580C"
+                />
 
-                  <Text style={styles.status}>{getStatus(selected)}</Text>
+                <Text style={styles.countText}>
+                  {visiblePlaces.length} places · within 5 km of campus
+                </Text>
+              </View>
+
+              <View style={styles.mapControls}>
+                <TouchableOpacity
+                  style={styles.mapButton}
+                  onPress={centerCampus}
+                  accessibilityLabel="Center on university"
+                  accessibilityRole="button"
+                >
+                  <Ionicons
+                    name="school-outline"
+                    size={23}
+                    color="#EA580C"
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.mapButton}
+                  onPress={findMyLocation}
+                  disabled={locating}
+                  accessibilityLabel="Show my location"
+                  accessibilityRole="button"
+                >
+                  {locating ? (
+                    <ActivityIndicator color="#EA580C" />
+                  ) : (
+                    <Ionicons
+                      name="locate-outline"
+                      size={24}
+                      color="#EA580C"
+                    />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {selected ? (
+              <View style={styles.bottomCard}>
+                <View style={styles.placeRow}>
+                  <PlacePhoto
+                    key={`${selected.kind}:${selected.id}:${selected.imageUrl}`}
+                    place={selected}
+                  />
+
+                  <View style={styles.placeInfo}>
+                    <Text
+                      style={styles.placeName}
+                      numberOfLines={1}
+                    >
+                      {selected.name}
+                    </Text>
+
+                    <Text style={styles.categoryText}>
+                      {CATEGORY_INFO[selected.kind].label}
+                      {' · '}
+                      {selected.distance < 1
+                        ? `${Math.round(selected.distance * 1000)} m`
+                        : `${selected.distance.toFixed(1)} km`}
+                      {' from campus'}
+                    </Text>
+
+                    <Text style={styles.status}>
+                      {getStatus(selected)}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => setSelected(null)}
+                    style={styles.closeButton}
+                    accessibilityLabel="Close selected place"
+                  >
+                    <Ionicons
+                      name="close"
+                      size={22}
+                      color="#78716C"
+                    />
+                  </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity
-                  onPress={() => setSelected(null)}
-                  style={styles.closeButton}
-                  accessibilityLabel="Close selected place"
-                >
-                  <Ionicons name="close" size={22} color="#78716C" />
-                </TouchableOpacity>
-              </View>
+                <View style={styles.actions}>
+                  <TouchableOpacity
+                    style={styles.directionsButton}
+                    onPress={() => openDirections(selected)}
+                  >
+                    <Ionicons
+                      name="navigate-outline"
+                      size={18}
+                      color="#EA580C"
+                    />
 
-              <View style={styles.actions}>
-                <TouchableOpacity
-                  style={styles.directionsButton}
-                  onPress={() => openDirections(selected)}
-                >
-                  <Ionicons name="navigate-outline" size={18} color="#EA580C" />
-                  <Text style={styles.directionsText}>Directions</Text>
-                </TouchableOpacity>
+                    <Text style={styles.directionsText}>
+                      Directions
+                    </Text>
+                  </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.detailsButton}
-                  onPress={() => openPlace(selected)}
-                >
-                  <Text style={styles.primaryText}>
-                    {selected.kind === 'food'
-                      ? 'View menu'
-                      : selected.kind === 'boarding'
-                        ? 'View boarding'
-                        : 'View pharmacies'}
-                  </Text>
-                  <Ionicons name="arrow-forward" size={17} color="#FFFFFF" />
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.detailsButton}
+                    onPress={() => openPlace(selected)}
+                  >
+                    <Text style={styles.primaryText}>
+                      {selected.kind === 'food'
+                        ? 'View menu'
+                        : selected.kind === 'boarding'
+                          ? 'View boarding'
+                          : 'View pharmacies'}
+                    </Text>
+
+                    <Ionicons
+                      name="arrow-forward"
+                      size={17}
+                      color="#FFFFFF"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          ) : (
-            <View style={styles.bottomHint}>
-              <Ionicons name="hand-left-outline" size={21} color="#EA580C" />
-              <Text style={styles.hintText}>
-                {visiblePlaces.length
-                  ? 'Tap a pin to discover a place. Purple marks your university.'
-                  : 'No places found in this category near your campus.'}
-              </Text>
-            </View>
-          )}
-        </>
-      )}
+            ) : (
+              <View style={styles.bottomHint}>
+                <Ionicons
+                  name="hand-left-outline"
+                  size={21}
+                  color="#EA580C"
+                />
+
+                <Text style={styles.hintText}>
+                  {visiblePlaces.length
+                    ? 'Tap a pin to discover a place. Purple marks your university.'
+                    : 'No places found in this category near your campus.'}
+                </Text>
+              </View>
+            )}
+          </>
+        )}
+      </View>
+
+      <NavigationBar />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FFF8EE' },
+  screen: {
+    flex: 1,
+    backgroundColor: '#FFF8EE',
+  },
+  content: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -693,9 +798,19 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: '#FFFFFF',
   },
-  headerText: { flex: 1 },
-  title: { fontSize: 22, fontWeight: '700', color: '#431407' },
-  subtitle: { marginTop: 3, fontSize: 12, color: '#78716C' },
+  headerText: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#431407',
+  },
+  subtitle: {
+    marginTop: 3,
+    fontSize: 12,
+    color: '#78716C',
+  },
   iconButton: {
     width: 44,
     height: 44,
@@ -711,8 +826,16 @@ const styles = StyleSheet.create({
     padding: 28,
     gap: 18,
   },
-  message: { fontSize: 14, lineHeight: 22, textAlign: 'center', color: '#78716C' },
-  filters: { padding: 14, gap: 9 },
+  message: {
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
+    color: '#78716C',
+  },
+  filters: {
+    padding: 14,
+    gap: 9,
+  },
   filter: {
     paddingHorizontal: 17,
     paddingVertical: 12,
@@ -721,16 +844,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FED7AA',
   },
-  activeFilter: { backgroundColor: '#F97316', borderColor: '#F97316' },
-  filterText: { fontSize: 12, fontWeight: '600', color: '#9A3412' },
-  activeFilterText: { color: '#FFFFFF' },
+  activeFilter: {
+    backgroundColor: '#F97316',
+    borderColor: '#F97316',
+  },
+  filterText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9A3412',
+  },
+  activeFilterText: {
+    color: '#FFFFFF',
+  },
   warning: {
     paddingHorizontal: 16,
     paddingBottom: 10,
     fontSize: 12,
     color: '#9A3412',
   },
-  mapContainer: { flex: 1, overflow: 'hidden' },
+  mapContainer: {
+    flex: 1,
+    overflow: 'hidden',
+  },
   countBadge: {
     position: 'absolute',
     top: 12,
@@ -744,8 +879,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     elevation: 3,
   },
-  countText: { flex: 1, fontSize: 11, fontWeight: '600', color: '#57534E' },
-  mapControls: { position: 'absolute', right: 14, bottom: 18, gap: 10 },
+  countText: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#57534E',
+  },
+  mapControls: {
+    position: 'absolute',
+    right: 14,
+    bottom: 18,
+    gap: 10,
+  },
   mapButton: {
     width: 48,
     height: 48,
@@ -761,8 +906,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#FFEDD5',
   },
-  placeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  photo: { width: 68, height: 68, borderRadius: 13 },
+  placeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  photo: {
+    width: 68,
+    height: 68,
+    borderRadius: 13,
+  },
   photoPlaceholder: {
     width: 68,
     height: 68,
@@ -771,12 +924,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  placeInfo: { flex: 1 },
-  placeName: { fontSize: 16, fontWeight: '700', color: '#292524' },
-  categoryText: { marginTop: 5, fontSize: 11, lineHeight: 17, color: '#EA580C' },
-  status: { marginTop: 5, fontSize: 12, color: '#57534E' },
-  closeButton: { padding: 10 },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 15 },
+  placeInfo: {
+    flex: 1,
+  },
+  placeName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#292524',
+  },
+  categoryText: {
+    marginTop: 5,
+    fontSize: 11,
+    lineHeight: 17,
+    color: '#EA580C',
+  },
+  status: {
+    marginTop: 5,
+    fontSize: 12,
+    color: '#57534E',
+  },
+  closeButton: {
+    padding: 10,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 15,
+  },
   directionsButton: {
     flex: 1,
     flexDirection: 'row',
@@ -787,7 +961,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFF7ED',
   },
-  directionsText: { fontSize: 12, fontWeight: '700', color: '#EA580C' },
+  directionsText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#EA580C',
+  },
   detailsButton: {
     flex: 1,
     flexDirection: 'row',
@@ -804,7 +982,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#F97316',
   },
-  primaryText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
+  primaryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   bottomHint: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -812,5 +994,10 @@ const styles = StyleSheet.create({
     padding: 18,
     backgroundColor: '#FFFFFF',
   },
-  hintText: { flex: 1, fontSize: 12, lineHeight: 19, color: '#78716C' },
+  hintText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 19,
+    color: '#78716C',
+  },
 });

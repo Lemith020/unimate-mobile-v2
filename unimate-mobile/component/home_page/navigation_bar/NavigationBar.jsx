@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -36,18 +36,45 @@ const TABS = [
   },
 ];
 
+function getActiveRoute(pathname) {
+  const cleanPath = (pathname || '/').replace(/\/+$/, '') || '/';
+
+  const matchedTab = TABS.find(
+    (tab) =>
+      cleanPath === tab.route ||
+      cleanPath.startsWith(`${tab.route}/`)
+  );
+
+  return matchedTab?.route ?? null;
+}
+
 export default function NavigationBar() {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
-  const openTab = (route) => {
-    if (pathname === route) return;
+  const currentRoute = getActiveRoute(pathname);
 
-    if (route === '/home_page') {
-      router.replace('/home_page');
-    } else {
-      router.push(route);
+  const [selectedRoute, setSelectedRoute] = useState(currentRoute);
+
+  useEffect(() => {
+    setSelectedRoute(currentRoute);
+  }, [pathname, currentRoute]);
+
+  const openTab = (route) => {
+    setSelectedRoute(route);
+
+    if (currentRoute === route) return;
+
+    try {
+      if (route === '/home_page') {
+        router.replace('/home_page');
+      } else {
+        router.push(route);
+      }
+    } catch (error) {
+      setSelectedRoute(currentRoute);
+      console.error('Navigation error:', error);
     }
   };
 
@@ -55,18 +82,20 @@ export default function NavigationBar() {
     <View
       style={[
         styles.container,
-        { paddingBottom: Math.max(insets.bottom, 10) },
+        {
+          paddingBottom: Math.max(insets.bottom, 10),
+        },
       ]}
     >
       {TABS.map((tab) => {
-        const active = pathname === tab.route;
-        const color = active ? '#F97316' : '#78716C';
+        const active = selectedRoute === tab.route;
+        const color = active ? '#EA580C' : '#78716C';
 
         return (
           <TouchableOpacity
             key={tab.route}
             style={styles.tab}
-            activeOpacity={0.75}
+            activeOpacity={0.8}
             onPress={() => openTab(tab.route)}
             accessibilityRole="button"
             accessibilityLabel={tab.label}
@@ -95,6 +124,13 @@ export default function NavigationBar() {
             >
               {tab.label}
             </Text>
+
+            <View
+              style={[
+                styles.indicator,
+                active && styles.activeIndicator,
+              ]}
+            />
           </TouchableOpacity>
         );
       })}
@@ -112,7 +148,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#FFEDD5',
     elevation: 12,
-    shadowColor: '#000',
+    shadowColor: '#000000',
     shadowOffset: {
       width: 0,
       height: -3,
@@ -122,15 +158,15 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    minHeight: 56,
+    minHeight: 62,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 2,
   },
   iconContainer: {
-    width: 48,
-    height: 32,
-    borderRadius: 12,
+    width: 50,
+    height: 34,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -144,5 +180,15 @@ const styles = StyleSheet.create({
   },
   activeLabel: {
     fontWeight: '700',
+  },
+  indicator: {
+    width: 16,
+    height: 3,
+    borderRadius: 2,
+    marginTop: 5,
+    backgroundColor: 'transparent',
+  },
+  activeIndicator: {
+    backgroundColor: '#EA580C',
   },
 });
