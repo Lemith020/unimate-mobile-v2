@@ -10,6 +10,15 @@ import { Ionicons } from '@expo/vector-icons';
 
 import QuantitySelector from './QuantitySelector';
 
+
+const LOCAL_FOOD_IMAGES = {
+    'rice': require('../../../assets/food-shops/food-images/egg-rice.png'),
+    'egg rice': require('../../../assets/food-shops/food-images/egg-rice.png'),
+    'vegetable rice': require('../../../assets/food-shops/food-images/vege-rice.png'),
+    'grilled shrimp salad': require('../../../assets/food-shops/food-images/grilled-shrimp-salad.jpg'),
+    'kottu': require('../../../assets/food-shops/food-images/kottu.png'),
+};
+
 export default function FoodItemCard({
     food,
     imageSource = null,
@@ -26,13 +35,21 @@ export default function FoodItemCard({
             ? food.image_url.trim()
             : '';
 
-    const source =
-        imageSource ||
-        (remoteImageUrl ? { uri: remoteImageUrl } : null);
+    const foodName = String(food?.name ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+console.log('FOOD IMAGE NAME:', foodName);
+const localImage = LOCAL_FOOD_IMAGES[foodName] ?? null;
 
-    useEffect(() => {
-        setImageFailed(false);
-    }, [food?.id, remoteImageUrl, imageSource]);
+const source =
+    localImage ||
+    imageSource ||
+    (remoteImageUrl ? { uri: remoteImageUrl } : null);
+
+useEffect(() => {
+    setImageFailed(false);
+}, [food?.id, foodName, remoteImageUrl, imageSource]);
 
     if (!food) return null;
 
