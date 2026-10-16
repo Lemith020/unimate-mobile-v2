@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NavigationBar from '../component/home_page/navigation_bar/NavigationBar';
 
 const API_URL = 'http://10.0.2.2:5000/api/orders/my';
 const PAGE_SIZE = 20;
@@ -466,7 +467,10 @@ export default function MyOrdersScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+   <SafeAreaView
+  style={styles.screen}
+  edges={['top', 'left', 'right']}
+>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.iconButton}
@@ -597,6 +601,9 @@ export default function MyOrdersScreen() {
         onRequestClose={() => setSelectedOrder(null)}
       >
         <View style={styles.modalOverlay}>
+
+
+          
           <SafeAreaView
             style={styles.modalSheet}
             edges={['bottom']}
@@ -712,6 +719,7 @@ export default function MyOrdersScreen() {
           </SafeAreaView>
         </View>
       </Modal>
+      <NavigationBar />
     </SafeAreaView>
   );
 }
