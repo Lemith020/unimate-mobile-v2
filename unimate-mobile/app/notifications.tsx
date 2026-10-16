@@ -9,6 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+import NavigationBar from '../component/home_page/navigation_bar/NavigationBar';
+
 export default function NotificationsScreen() {
     const router = useRouter();
 
@@ -21,7 +23,10 @@ export default function NotificationsScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView
+            style={styles.container}
+            edges={['top', 'left', 'right']}
+        >
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.backButton}
@@ -36,7 +41,9 @@ export default function NotificationsScreen() {
                     />
                 </TouchableOpacity>
 
-                <Text style={styles.title}>Notifications</Text>
+                <Text style={styles.title}>
+                    Notifications
+                </Text>
             </View>
 
             <View style={styles.content}>
@@ -65,6 +72,7 @@ export default function NotificationsScreen() {
                     <Text style={styles.homeButtonText}>
                         Back to Home
                     </Text>
+
                     <Ionicons
                         name="arrow-forward"
                         size={18}
@@ -72,6 +80,8 @@ export default function NotificationsScreen() {
                     />
                 </TouchableOpacity>
             </View>
+
+            <NavigationBar />
         </SafeAreaView>
     );
 }
