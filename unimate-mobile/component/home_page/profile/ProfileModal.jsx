@@ -227,12 +227,11 @@ export default function ProfileModal({ visible, onClose }) {
                             }
                         >
 
-                            <Image
-                                source={{
-                                    uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500'
-                                }}
-                                style={styles.avatar}
-                            />
+                        <Image
+                            source={require('../../../assets/about_us_page_developers_photos/lemith.png')}
+                            style={styles.avatar}
+                            resizeMode="cover"
+                        />
 
 
                             <Text

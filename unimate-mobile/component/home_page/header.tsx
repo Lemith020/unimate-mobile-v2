@@ -237,15 +237,11 @@ export default function Header({
                     }
                 >
 
-                    <Image
-
-                        source={{
-                            uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
-                        }}
-
-                        style={styles.avatar}
-
-                    />
+                <Image
+                    source={require('../../assets/about_us_page_developers_photos/lemith.png')}
+                    style={styles.avatar}
+                    resizeMode="cover"
+                />
 
                 </TouchableOpacity>
 
