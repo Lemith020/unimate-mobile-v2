@@ -12,6 +12,7 @@ const foodRoutes = require('./routes/foodRoutes');
 const pharmacyRoutes = require('./routes/pharmacyRoutes');
 const marketplaceRoutes = require('./routes/marketplaceRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const searchRoutes = require('./routes/searchRoutes');
 
 // Create app
 const app = express();
@@ -35,6 +36,8 @@ app.get('/', (req, res) => {
         message: 'Unimate Backend API is running',
     });
 });
+
+app.use('/api/search', searchRoutes);
 
 // Handle unknown routes
 app.use((req, res) => {
