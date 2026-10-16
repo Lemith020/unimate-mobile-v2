@@ -14,6 +14,8 @@ export default function MenuDrawer({ visible, onClose }) {
     const [fullName, setFullName] = useState('Student');
 
 
+
+
     useEffect(() => {
         const fetchUserData = async () => {
             try {
@@ -44,7 +46,7 @@ export default function MenuDrawer({ visible, onClose }) {
     }, [visible]);
 
     const handleLogout = async () => {
-        await AsyncStorage.removeItem('userData'); // ලොග් අවුට් වෙද්දී ඩේටා ක්ලියර් කරනවා
+        await AsyncStorage.removeItem('userData'); 
         onClose();
         router.replace('/login');
     };
