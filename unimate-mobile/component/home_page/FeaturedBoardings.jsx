@@ -68,10 +68,10 @@ function getRoomLabel(value) {
 function BoardingCard({ boarding, onPress }) {
     const [imageFailed, setImageFailed] = useState(false);
 
-    const imageUrl =
-        typeof boarding.image_url === 'string'
-            ? boarding.image_url.trim()
-            : '';
+const imageSource =
+    boarding.id === '9df8696f-920f-4d25-a512-f7faff534d0b'
+        ? require('../../assets/bodim-images/bordim2.png')
+        : require('../../assets/bodim-images/bordim1.png');
 
     const roomLabel = getRoomLabel(boarding.room_type);
 
@@ -84,9 +84,9 @@ function BoardingCard({ boarding, onPress }) {
             accessibilityLabel={`View ${boarding.title}`}
         >
             <View style={styles.imageContainer}>
-                {imageUrl && !imageFailed ? (
+                {!imageFailed ? (
                     <Image
-                        source={{ uri: imageUrl }}
+                        source={imageSource}
                         style={styles.cardImage}
                         resizeMode="cover"
                         onError={() => setImageFailed(true)}

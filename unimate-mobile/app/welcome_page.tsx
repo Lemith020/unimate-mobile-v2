@@ -17,7 +17,7 @@ export default function WelcomeScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       
-      {/* උඩ කොටස: ඇප් අයිකන් එක සහ වෙල්කම් ටෙක්ස්ට් එක */}
+      
       <View style={styles.headerContainer}>
         <Image 
           source={require('../assets/unimate_app_icon.jpg')} 
@@ -57,7 +57,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff8f0', // ලා ඔරේන්ජ් පාට Soft Theme Background එකක්
+    backgroundColor: '#fff8f0', 
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 30,
